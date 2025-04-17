@@ -59,6 +59,8 @@ int main(void)
 	conexion = crear_conexion(ip, puerto);
 
 	// Enviamos al servidor el valor de CLAVE como mensaje
+	enviar_mensaje(valor, conexion);
+
 
 	// Armamos y enviamos el paquete
 	paquete(conexion);
@@ -78,10 +80,11 @@ t_log* iniciar_logger(void)
 	return nuevo_logger;
 }
 
+
 t_config* iniciar_config(void)
 {
 	t_config* nuevo_config;
-	nuevo_config = config_create("/home/utnso/Documents/tp0/client/cliente.config"); //Vinculo con el archivo .config
+	nuevo_config = config_create("/home/utnso/Documents/tp0-ssh/client/cliente.config"); //Vinculo con el archivo .config
 
 	return nuevo_config;
 } 
@@ -91,7 +94,7 @@ void leer_consola(t_log* logger)
 {
 	char* leido;
 
-	// Revisar manual readme
+	// Revisar manual readline
 	while (1)
 	{
 		leido = readline("> "); //Lee lo que le ingreso por consola desde el > hasta que apriete enter
@@ -107,23 +110,37 @@ void leer_consola(t_log* logger)
 	}
 }
 
+
 void paquete(int conexion)
 {
 	// Ahora toca lo divertido!
 	char* leido;
-	t_paquete* paquete;
+	t_paquete* paquete = crear_paquete();
 
 	// Leemos y esta vez agregamos las lineas al paquete
+	while (1)
+	{
+		leido = readline("> ");
 
+		if (strlen(leido) == 0)
+		{
+			free(leido);
+			break;
+		}
+
+		agregar_a_paquete(paquete, leido, strlen(leido) + 1); // +1 para el '\0' por ser streams y no strings
+		free(leido);
+	}
 
 	// ¡No te olvides de liberar las líneas y el paquete antes de regresar!
-	
+	enviar_paquete(paquete, conexion); //Sendeo el paquete al server
+	eliminar_paquete(paquete);
 }
+
 
 void terminar_programa(int conexion, t_log* logger, t_config* config)
 {
+	liberar_conexion(conexion);
 	log_destroy(logger);
 	config_destroy(config);
-	/* Y por ultimo, hay que liberar lo que utilizamos (conexion, log y config) 
-	  con las funciones de las commons y del TP mencionadas en el enunciado */
 }

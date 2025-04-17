@@ -3,7 +3,7 @@
 
 void* serializar_paquete(t_paquete* paquete, int bytes)
 {
-	void * magic = malloc(bytes);
+	void* magic = malloc(bytes);
 	int desplazamiento = 0;
 
 	memcpy(magic + desplazamiento, &(paquete->codigo_operacion), sizeof(int));
@@ -18,26 +18,46 @@ void* serializar_paquete(t_paquete* paquete, int bytes)
 
 int crear_conexion(char *ip, char* puerto)
 {
-	struct addrinfo hints;
-	struct addrinfo *server_info;
+	struct addrinfo hints, *server_info, *p;
+	int socket_cliente, err;
+
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
 
-	getaddrinfo(ip, puerto, &hints, &server_info);
+	err = getaddrinfo(ip, puerto, &hints, &server_info);
+	if (err != 0) 
+	{
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
+		exit(EXIT_FAILURE);
+	}
 
-	// Ahora vamos a crear el socket.
-	int socket_cliente = 0;
 
-	// Ahora que tenemos el socket, vamos a conectarlo
+	for (p = server_info; p != NULL; p = p->ai_next)
+	{
+		socket_cliente = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (socket_cliente == -1)
+			continue;
+
+		err = connect(socket_cliente, p->ai_addr, p->ai_addrlen);
+		if (err != -1)
+			break;
+
+		close(socket_cliente);
+	}
 
 
 	freeaddrinfo(server_info);
 
+	if (p == NULL) {
+		perror("No se pudo conectar");
+		exit(EXIT_FAILURE);
+	}
+
 	return socket_cliente;
 }
+
 
 void enviar_mensaje(char* mensaje, int socket_cliente)
 {
@@ -51,7 +71,7 @@ void enviar_mensaje(char* mensaje, int socket_cliente)
 
 	int bytes = paquete->buffer->size + 2*sizeof(int);
 
-	void* a_enviar = serializar_paquete(paquete, bytes);
+	void* a_enviar = serializar_paquete(paquete, bytes); //Clave serializar (revisar bien)
 
 	send(socket_cliente, a_enviar, bytes, 0);
 
